@@ -40,6 +40,6 @@ setup(
         "Operating System :: OS Independent"
     ],
     entry_points={
-        'ehforwarderbot.slave': 'wechat.PcCOM = efb-wechatcom-slave:WechatPcChannel',
+        'ehforwarderbot.slave': 'wechat.PcCOM = efb-wechatcom-slave:WechatCOMChannel',
     }
 )
