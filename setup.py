@@ -8,7 +8,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 __version__ = ""
-exec(open('efb-wechatcom-slave/__version__.py').read())
+exec(open('efb_wechatcom_slave/__version__.py').read())
 
 
 setup(
@@ -40,6 +40,6 @@ setup(
         "Operating System :: OS Independent"
     ],
     entry_points={
-        'ehforwarderbot.slave': 'wechat.PcCOM = efb-wechatcom-slave:WechatCOMChannel',
+        'ehforwarderbot.slave': 'wechat.PcCOM = efb_wechatcom_slave:WechatCOMChannel',
     }
 )

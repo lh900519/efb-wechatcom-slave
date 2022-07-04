@@ -1,4 +1,4 @@
 config
-efb-wechatcom-slave/Server.py
-efb-wechatcom-slave/config.yaml
+Server.py
+config.yaml
 DockerFile
