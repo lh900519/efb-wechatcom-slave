@@ -115,7 +115,7 @@ def efb_msgType49_xml_wrapper(text: str) -> Tuple[Message]:
                         content += f'<a href="{url}">{title}</a>'
                     else:
                         content += f"{title}"
-                    
+
                     if digest:
                         digest = html.escape(digest)
                         content += f"\n{digest}"
@@ -125,7 +125,7 @@ def efb_msgType49_xml_wrapper(text: str) -> Tuple[Message]:
                 try:
                     if cover:
                         cover = cover.replace('\n', '')
-                        
+
                         content = f"\n{content}"
                         if len(content) >= 800:
                             content = re.sub(r'chksm=(.*?)#', '', content)
@@ -139,7 +139,7 @@ def efb_msgType49_xml_wrapper(text: str) -> Tuple[Message]:
                         efb_msg = efb_text_simple_wrapper(content)[0]
                 except Exception as e:
                     print(e)
-                    
+
                 efb_msgs.append(efb_msg)
         elif type == 6:     # 收到文件的第二个提示【文件下载完成】
             title = xml.xpath('string(/msg/appmsg/title/text())')
@@ -178,7 +178,7 @@ def efb_msgType49_xml_wrapper(text: str) -> Tuple[Message]:
                 efb_msg = efb_image_wrapper(file, weappname, text)[0]
             except Exception as e:
                 print(e)
-                
+
             efb_msgs.append(efb_msg)
         elif type == 51:    # 当前微信版本不支持展示该内容，请升级至最新版本。
             title = xml.xpath('string(/msg/appmsg/title/text())')
@@ -186,7 +186,7 @@ def efb_msgType49_xml_wrapper(text: str) -> Tuple[Message]:
             nickname = xml.xpath('string(/msg/appmsg/finderFeed/nickname/text())')
             desc = xml.xpath('string(/msg/appmsg/finderFeed/desc/text())')
             cover = xml.xpath('string(/msg/appmsg/finderFeed/mediaList/media/coverUrl/text())')
-            
+
             if cover:
                 try:
                     text = f"视频号: {nickname}\n内容: {desc}\n"
@@ -238,7 +238,7 @@ def efb_msgType49_xml_wrapper(text: str) -> Tuple[Message]:
                 efb_msg = efb_image_wrapper(file, weappname, text)[0]
             except Exception as e:
                 print(e)
-                
+
             efb_msgs.append(efb_msg)
         elif type == 74:    # 收到文件的第一个提示
             pass
