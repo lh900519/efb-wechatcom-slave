@@ -39,7 +39,7 @@ def efb_msgType49_xml_wrapper(text: str) -> Tuple[Message]:
     //appmsg/type = 8   : 搜狗表情，暂时不支持发送
     //appmsg/type = 17  : 实时位置共享
     //appmsg/type = 19  : 转发聊天记录
-    //appmsg/type = 21  : 微信运动点赞
+    //appmsg/type = 21  : 微信运动点赞 / 每日排名
     //appmsg/type = 33  : 微信小程序
     //appmsg/type = 51  : 当前微信版本不支持展示该内容，请升级至最新版本。
     //appmsg/type = 57  : 【感谢 @honus 提供样本 xml】引用(回复)消息，未细致研究哪个参数是被引用的消息 id
@@ -155,10 +155,19 @@ def efb_msgType49_xml_wrapper(text: str) -> Tuple[Message]:
             )
             efb_msgs.append(efb_msg)
         elif type == 21:    # 微信运动点赞
-            title = xml.xpath('string(/msg/appmsg/title/text())')
+            ranktitle = xml.xpath('string(/msg/appmsg/hardwareinfo/messagenodeinfo/rankinfo/rank/ranktitle/text())')
+            rankdisplay = xml.xpath('string(/msg/appmsg/hardwareinfo/messagenodeinfo/rankinfo/rank/rankdisplay/text())')
+            scoretitle = xml.xpath('string(/msg/appmsg/hardwareinfo/messagenodeinfo/rankinfo/score/scoretitle/text())')
+            scoredisplay = xml.xpath('string(/msg/appmsg/hardwareinfo/messagenodeinfo/rankinfo/score/scoredisplay/text())')
+
+            if ranktitle != "":
+                text = f"微信运动每日排名:\n\n{ranktitle}: {rankdisplay}\n{scoretitle}: {scoredisplay}"
+            else:
+                text = xml.xpath('string(/msg/appmsg/title/text())')
+
             efb_msg = Message(
                 type=MsgType.Text,
-                text=f"🏃{title}",
+                text=f"🏃{text}",
             )
             efb_msgs.append(efb_msg)
         elif type == 33:    # 微信小程序
