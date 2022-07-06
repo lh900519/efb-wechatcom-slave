@@ -32,7 +32,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
-        'Development Status :: 1 - Beta',
+        'Development Status :: 2 - Beta',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: User Interfaces',
         'License :: OSI Approved :: MIT License',
@@ -40,6 +40,6 @@ setup(
         "Operating System :: OS Independent"
     ],
     entry_points={
-        'ehforwarderbot.slave': 'wechat.PcCOM = efb_wechatcom_slave:WechatCOMChannel',
+        'ehforwarderbot.slave': 'tedrolin.wechatPc = efb_wechatcom_slave:WechatCOMChannel',
     }
 )
