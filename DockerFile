@@ -1,0 +1,33 @@
+FROM python:3.8-slim
+
+ENV LANG C.UTF-8
+
+# 添加时区环境变量，亚洲，上海
+# 使用软连接，并且将时区配置覆盖/etc/timezone
+ENV TimeZone=Asia/Shanghai
+RUN sed -i 's/https*:\/\/deb.debian.org/https:\/\/mirrors.cloud.tencent.com/g' /etc/apt/sources.list
+
+# 设置时区为上海
+RUN apt clean all \
+    && apt update \
+    && apt install -y ffmpeg libmagic-dev libwebp-dev git \
+    && echo $TimeZone > /etc/timezone \
+    && rm -rf /var/tmp/* \
+    && rm -rf /var/cache/apt/*
+
+RUN set -ex \
+    && pip3 install -U python-telegram-bot -i https://mirrors.aliyun.com/pypi/simple/ \
+    && pip3 install -U python-telegram-bot[socks] -i https://mirrors.aliyun.com/pypi/simple/ \
+    && pip3 install -U wheel six ehforwarderbot -i https://mirrors.aliyun.com/pypi/simple/
+
+RUN set -ex \
+    && pip3 install -U git+https://github.com/lh900519/efb-telegram-master \
+    && pip3 install -U git+https://github.com/lh900519/efb-wechatcom-slave
+
+
+RUN mkdir -p /root/.ehforwarderbot/modules/
+
+# COPY filter.py /root/.ehforwarderbot/modules/
+# RUN wget https://gist.githubusercontent.com/blueset/0084ab142e2213bca50d81d08753e564/raw/8699f4b7007b396ff06493eb3ded34402b19d5d0/filter.py -P /root/.ehforwarderbot/modules/
+
+CMD ["ehforwarderbot"]

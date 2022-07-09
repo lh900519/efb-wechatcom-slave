@@ -54,6 +54,16 @@ def timestamp():
     ts = int(datetime.timestamp(datetime.now()) * 1000)
     return ts
 
+def xor_string(data, key='awesomepassword', encode=False, decode=False):
+    from itertools import cycle
+    import base64
+    if decode:
+        data = base64.b64decode(data).decode('utf-8')
+    xored = ''.join(chr(ord(c)^ord(k)) for c,k in zip(data, cycle(key)))
+
+    if encode:
+        return base64.b64encode(xored).decode('ascii')
+    return xored
 
 def get_query_param(path, key):
     query = urllib.parse.urlparse(path).query
@@ -212,7 +222,8 @@ class WechatCOMChannel(SlaveChannel):
                 print(f"关闭 send_message_to_wechat")
                 break
             print(f"发送到wechatClient的消息 {message}")
-            await ws.send(message)
+
+            await ws.send(xor_string(message, key=self.config['app_key'], encode=True))
 
     # 发送消息到Tg
     async def send_message_to_tg(self, msg):
