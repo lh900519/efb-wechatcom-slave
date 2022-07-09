@@ -310,10 +310,11 @@ class WechatCOMChannel(SlaveChannel):
             except ConnectionClosed as e:
                 self.logger.error(f"WS ConnectionClosed, code: {e.code}")
                 if e.code == 1006:
-                    self.message_queue.put_nowait('close')
+                    # self.message_queue.put_nowait('close')
                     self.logger.error(f"连接关闭, restart")
-                    await asyncio.sleep(2)
-                    break
+                    # break
+
+                await asyncio.sleep(2)
 
     # 加载配置
     def load_config(self):
