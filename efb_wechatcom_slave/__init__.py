@@ -62,6 +62,7 @@ def xor_string(data, key='awesomepassword', encode=False, decode=False):
     xored = ''.join(chr(ord(c)^ord(k)) for c,k in zip(data, cycle(key)))
 
     if encode:
+        xored = xored.encode("utf-8")
         return base64.b64encode(xored).decode('ascii')
     return xored
 
@@ -221,7 +222,7 @@ class WechatCOMChannel(SlaveChannel):
             if message == 'close':
                 print(f"关闭 send_message_to_wechat")
                 break
-            print(f"发送到wechatClient的消息 {message}")
+            print(f"发送到wechatClient的消息 {type(message)} {message}")
 
             await ws.send(xor_string(message, key=self.config['app_key'], encode=True))
 
@@ -322,7 +323,7 @@ class WechatCOMChannel(SlaveChannel):
                 if e.code == 1006:
                     # self.message_queue.put_nowait('close')
                     self.logger.error(f"连接关闭, restart")
-                    # break
+                    break
 
                 await asyncio.sleep(2)
 
