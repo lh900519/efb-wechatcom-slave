@@ -294,7 +294,9 @@ class WechatCOMChannel(SlaveChannel):
         while True:
             try:
                 recv_data = await conn.recv()
-                message = json.loads(recv_data)
+                decode_data = xor_string(recv_data, key=self.config['app_key'], decode=True)
+
+                message = json.loads(decode_data)
 
                 if 'msg_to' not in message:
                     continue
@@ -311,9 +313,6 @@ class WechatCOMChannel(SlaveChannel):
                 else:
                     pass
 
-                # self.logger.debug(f"on recv message: {recv_data}")
-                # message = input('please input:')
-                # await conn.send(message)
             except json.JSONDecodeError:
                 self.logger.error(f"消息解析失败")
                 continue
