@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import http
 import logging
 import queue
 import gettext
@@ -19,7 +20,7 @@ from urllib.request import urlopen
 import urllib.parse
 
 from typing import Optional, Collection, BinaryIO, Dict, Any, Callable
-from datetime import datetime
+import time
 
 import websockets
 from websockets import ConnectionClosed
@@ -47,31 +48,36 @@ TYPE_HANDLERS = {
     43: MsgProcessor.voideo_msg,
     47: MsgProcessor.emojipic_msg,
     48: MsgProcessor.location_msg,
-    49: MsgProcessor.msgType49_xml_msg
+    49: MsgProcessor.msgType49_xml_msg,
 }
 
+# 获取当前时间戳
 def timestamp():
-    ts = int(datetime.timestamp(datetime.now()) * 1000)
-    return ts
+    return int(time.time() * 1000)
 
-def xor_string(data, key='awesomepassword', encode=False, decode=False):
+
+def xor_string(data, key="awesomepassword", encode=False, decode=False):
     from itertools import cycle
     import base64
+
     if decode:
-        data = base64.b64decode(data).decode('utf-8')
-    xored = ''.join(chr(ord(c)^ord(k)) for c,k in zip(data, cycle(key)))
+        data = base64.b64decode(data).decode("utf-8")
+    xored = "".join(chr(ord(c) ^ ord(k)) for c, k in zip(data, cycle(key)))
 
     if encode:
         xored = xored.encode("utf-8")
-        return base64.b64encode(xored).decode('ascii')
+        return base64.b64encode(xored).decode("ascii")
     return xored
 
+
+# 获取请求参数
 def get_query_param(path, key):
     query = urllib.parse.urlparse(path).query
     params = urllib.parse.parse_qs(query)
     values = params.get(key, [])
     if len(values) == 1:
         return values[0]
+
 
 # 验证连接
 class QueryParamProtocol(websockets.WebSocketServerProtocol):
@@ -118,10 +124,17 @@ class WechatCOMChannel(SlaveChannel):
     message_queue = asyncio.Queue()
 
     logger: logging.Logger = logging.getLogger(
-        "plugins.%s.WeChatPcChannel" % channel_id)
+        "plugins.%s.WeChatPcChannel" % channel_id
+    )
 
-    supported_message_types = {MsgType.Text, MsgType.Sticker, MsgType.Image,
-                               MsgType.Link, MsgType.Voice, MsgType.Animation}
+    supported_message_types = {
+        MsgType.Text,
+        MsgType.Sticker,
+        MsgType.Image,
+        MsgType.Link,
+        MsgType.Voice,
+        MsgType.Animation,
+    }
 
     def __init__(self, instance_id: InstanceID = None):
         super().__init__(instance_id)
@@ -137,34 +150,39 @@ class WechatCOMChannel(SlaveChannel):
         self.server_start_event = threading.Event()
         self.client_online_event = threading.Event()
 
-        self.info_list['friend'] = []
-        self.info_dict['friend'] = {}
+        self.info_list["friend"] = []
+        self.info_dict["friend"] = {}
 
         ChatMgr.slave_channel = self
 
-        @self.add_handler('update_friend_list')
+        @self.add_handler("update_friend_list")
         async def update_friend_list(msg: dict):
-            self.info_list['chat'] = []
+            self.info_list["chat"] = []
 
-            for friend in msg['data']:
-                wxid = friend['wxid']
-                friend_name = "" if friend.get('wxNickName') == "null" else friend.get('wxNickName')
-                friend_remark = "" if friend.get('wxRemark') == "null" else friend.get('wxRemark')
+            for friend in msg["data"]:
+                wxid = friend["wxid"]
+                friend_name = (
+                    ""
+                    if friend.get("wxNickName") == "null"
+                    else friend.get("wxNickName")
+                )
+                friend_remark = (
+                    "" if friend.get("wxRemark") == "null" else friend.get("wxRemark")
+                )
                 # print(f"{wxid}, name: {friend_name}, remark: {friend_remark}\n")
-                if '@chatroom' in wxid:
+                if "@chatroom" in wxid:
                     # 微信群
                     new_entity = EFBGroupChat(
-                        uid=wxid,
-                        name=friend_name or friend_remark or wxid
+                        uid=wxid, name=friend_name or friend_remark or wxid
                     )
                 else:
                     new_entity = EFBPrivateChat(
-                        uid=wxid,
-                        name=friend_name or wxid,
-                        alias=friend_remark
+                        uid=wxid, name=friend_name or wxid, alias=friend_remark
                     )
 
-                self.info_list['chat'].append(ChatMgr.build_efb_chat_as_group(new_entity))
+                self.info_list["chat"].append(
+                    ChatMgr.build_efb_chat_as_group(new_entity)
+                )
 
             # print(self.info_list['chat'])
             self.update_friend_event.set()
@@ -178,17 +196,17 @@ class WechatCOMChannel(SlaveChannel):
 
             ws = websockets.serve(
                 ws_handler=self.handler,
-                host=self.config['server_addr'],
-                port=self.config['server_port'],
+                host=self.config["server_addr"],
+                port=self.config["server_port"],
                 create_protocol=QueryParamProtocol,
                 ping_interval=2,
-                loop=self.loop)
+                loop=self.loop,
+            )
 
             self.loop.run_until_complete(ws)
             self.server_start_event.set()
             self.loop.run_forever()
 
-        # self.server_start()
         try:
             t = threading.Thread(target=start_server, args=())
             t.daemon = True
@@ -202,83 +220,103 @@ class WechatCOMChannel(SlaveChannel):
         self.client_online_event.wait()
         self.logger.info(f"初始化服务 2")
 
-
     def log(self, text):
-        self.logger.log(99, "\x1b[0;36m %s \x1b[0m", "{}: {}".format(self.channel_id, text))
+        self.logger.log(
+            99, "\x1b[0;36m %s \x1b[0m", "{}: {}".format(self.channel_id, text)
+        )
 
     def add_handler(self, func_name: str):
         def wrapper(func: Callable):
             if not asyncio.iscoroutinefunction(func):
-                raise Exception('Handler must be a coroutine function')
+                raise Exception("Handler must be a coroutine function")
 
             self.msg_handlers[func_name] = func
             return func
+
         return wrapper
 
     # 发送到微信
     async def send_message_to_wechat(self, ws):
         while True:
             message = await self.message_queue.get()
-            if message == 'close':
+            if message == "close":
                 print(f"关闭 send_message_to_wechat")
                 break
             print(f"发送到wechatClient的消息 {type(message)} {message}")
 
-            await ws.send(xor_string(message, key=self.config['app_key'], encode=True))
+            await ws.send(xor_string(message, key=self.config["app_key"], encode=True))
 
     # 发送消息到Tg
     async def send_message_to_tg(self, msg):
 
-        print(msg)
-
         chat = None
         author = None
 
-        username = "" if msg['nickname'] == "null" else msg['nickname']
-        remark_name = "" if msg['remark'] == "null" else msg['remark']
+        username = "" if msg["nickname"] == "null" else msg["nickname"]
+        remark_name = "" if msg["remark"] == "null" else msg["remark"]
 
-        if 'chatroomname' in msg:
-            group_name = "" if msg['chatroomname'] == "null" else msg['chatroomname']
-            group_remark_name = "" if msg['chatroomremark'] == "null" else msg['chatroomremark']
+        if "chatroomname" in msg:
+            group_name = "" if msg["chatroomname"] == "null" else msg["chatroomname"]
+            group_remark_name = (
+                "" if msg["chatroomremark"] == "null" else msg["chatroomremark"]
+            )
 
-            chat = ChatMgr.build_efb_chat_as_group(EFBGroupChat(
-                uid=msg['from'],
-                name=group_name or group_remark_name or msg['from']
-            ))
-            author = ChatMgr.build_efb_chat_as_member(chat, EFBGroupMember(
-                name=username,
-                alias=remark_name,
-                uid=msg['wxid']
-            ))
+            chat = ChatMgr.build_efb_chat_as_group(
+                EFBGroupChat(
+                    uid=msg["from"], name=group_name or group_remark_name or msg["from"]
+                )
+            )
+            author = ChatMgr.build_efb_chat_as_member(
+                chat, EFBGroupMember(name=username, alias=remark_name, uid=msg["wxid"])
+            )
         else:
-            chat = ChatMgr.build_efb_chat_as_private(EFBPrivateChat(
-                uid=msg['wxid'],
-                name=remark_name or username or msg['wxid'],
-            ))
+            chat = ChatMgr.build_efb_chat_as_private(
+                EFBPrivateChat(
+                    uid=msg["wxid"],
+                    name=remark_name or username or msg["wxid"],
+                )
+            )
             author = chat.other
 
-        if 'type' in msg and msg['type'] in TYPE_HANDLERS:
-            efb_msgs = TYPE_HANDLERS[msg['type']](msg)
+        if "type" in msg and msg["type"] in TYPE_HANDLERS:
+            efb_msgs = TYPE_HANDLERS[msg["type"]](msg)
         else:
-            efb_msgs = efb_text_simple_wrapper(html.escape(msg['message']))
+            efb_msgs = efb_text_simple_wrapper(html.escape(msg["message"]))
 
         for efb_msg in efb_msgs:
             efb_msg.author = author
             efb_msg.chat = chat
             efb_msg.deliver_to = coordinator.master
-            if msg.get('isOwner', 1) == 1:
+            if msg.get("isOwner", 1) == 1:
                 efb_msg.text = f"🦚You🦚:\n\n{efb_msg.text}"
             coordinator.send_message(efb_msg)
+
+    # 模拟文件传输助手发送消息
+    def tg_msg_text(self, text):
+        msg = {
+            "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+            "type": 1,
+            "isOwner": 1,
+            "wxid": "filehelper",
+            "sendto": "filehelper",
+            "message": text,
+            "filepath": "",
+            "nickname": "文件传输助手",
+            "wxNumber": "null",
+            "remark": "null",
+        }
+
+        return json.dumps(msg)
 
     # 接受远端发送的消息
     async def handler(self, conn):
 
         local_sign = hashlib.sha256(
-            f"app_id={conn.app_id}&timestamp={conn.timestamp}&app_key{self.config['app_key']}".encode()) \
-            .hexdigest()
+            f"app_id={conn.app_id}&timestamp={conn.timestamp}&app_key{self.config['app_key']}".encode()
+        ).hexdigest()
 
-        self.logger.debug(self.config['app_id'])
-        self.logger.debug(self.config['app_key'])
+        self.logger.debug(self.config["app_id"])
+        self.logger.debug(self.config["app_key"])
         self.log(f"校验客户token")
         # self.logger.info(f"获取到的token {conn.hash}")
         # self.logger.info(f"生成的token   {local_sign}")
@@ -295,20 +333,22 @@ class WechatCOMChannel(SlaveChannel):
         while True:
             try:
                 recv_data = await conn.recv()
-                decode_data = xor_string(recv_data, key=self.config['app_key'], decode=True)
+                decode_data = xor_string(
+                    recv_data, key=self.config["app_key"], decode=True
+                )
 
                 message = json.loads(decode_data)
 
-                if 'msg_to' not in message:
+                if "msg_to" not in message:
                     continue
 
                 # 消息需要推送到tg
-                if message['msg_to'] == 'tg':
+                if message["msg_to"] == "tg":
                     self.logger.info(f"收到微信消息推送 {message}")
                     await self.send_message_to_tg(message)
-                elif message['msg_to'] == 'fun' and 'msg_fun' in message:
+                elif message["msg_to"] == "fun" and "msg_fun" in message:
                     self.logger.info(f"收到消息 {message}")
-                    fun = message['msg_fun']
+                    fun = message["msg_fun"]
                     if fun in self.msg_handlers:
                         self.loop.create_task(self.msg_handlers[fun](message))
                 else:
@@ -321,8 +361,12 @@ class WechatCOMChannel(SlaveChannel):
             except ConnectionClosed as e:
                 self.logger.error(f"WS ConnectionClosed, code: {e.code}")
                 if e.code == 1006:
+                    await self.send_message_to_tg(self.tg_msg_text("客户端连接关闭，等待重新连接"))
                     # self.message_queue.put_nowait('close')
                     self.logger.error(f"连接关闭, restart")
+
+                    await asyncio.sleep(5)
+
                     break
 
                 await asyncio.sleep(2)
@@ -342,25 +386,24 @@ class WechatCOMChannel(SlaveChannel):
                 return
             self.config: Dict[str, Any] = d
 
-        if 'server_addr' not in self.config:
+        if "server_addr" not in self.config:
             raise EFBException("server_addr not found in config")
-        if 'server_port' not in self.config:
+        if "server_port" not in self.config:
             raise EFBException("server_port not found in config")
-        if 'app_id' not in self.config:
+        if "app_id" not in self.config:
             raise EFBException("app_id not found in config")
-        if 'app_key' not in self.config:
+        if "app_key" not in self.config:
             raise EFBException("app_key not found in config")
-        if 'expire' not in self.config:
+        if "expire" not in self.config:
             raise EFBException("expire not found in config")
 
     # 发送消息到微信
-    def send_message(self, msg: 'Message') -> 'Message':
+    def send_message(self, msg: "Message") -> "Message":
         chat_uid = msg.chat.uid
         print(f"send_msg {msg}")
         # self.logger.debug(f"message.vendor_specific.get('is_mp', False): {msg.vendor_specific.get('is_mp', False)}")
-        if msg.vendor_specific.get('is_mp') is not None:
-            msg.chat.vendor_specific['is_mp'] = msg.vendor_specific.get(
-                'is_mp')
+        if msg.vendor_specific.get("is_mp") is not None:
+            msg.chat.vendor_specific["is_mp"] = msg.vendor_specific.get("is_mp")
 
         if msg.edit:
             pass  # todo
@@ -377,61 +420,64 @@ class WechatCOMChannel(SlaveChannel):
                 #     message=msg.text
                 # ), self.loop).result()
             else:
-                self.message_queue.put_nowait(json.dumps({
-                    'recv_type': 'sendmsg',
-                    'data': {
-                        'type': 'text',
-                        'wxid': msg.chat.uid,
-                        'content':msg.text
-                    }
-                }))
+                self.message_queue.put_nowait(
+                    json.dumps(
+                        {
+                            "recv_type": "sendmsg",
+                            "data": {
+                                "type": "text",
+                                "wxid": msg.chat.uid,
+                                "content": msg.text,
+                            },
+                        }
+                    )
+                )
 
             msg.uid = str(uuid.uuid4())
-            self.logger.debug(
-                '[%s] Sent as a text message. %s', msg.uid, msg.text)
+            self.logger.debug("[%s] Sent as a text message. %s", msg.uid, msg.text)
         return msg
 
     def poll(self):
         pass
 
-    def send_status(self, status: 'Status'):
+    def send_status(self, status: "Status"):
         pass
 
-    def get_chat_picture(self, chat: 'Chat') -> BinaryIO:
+    def get_chat_picture(self, chat: "Chat") -> BinaryIO:
         # url = self.get_friend_info('headUrl', chat.uid)
         url = ""
         if not url:
             # temp workaround
-            url = "https://pic2.zhimg.com/50/v2-6afa72220d29f045c15217aa6b275808_720w.jpg"
+            url = (
+                "https://pic2.zhimg.com/50/v2-6afa72220d29f045c15217aa6b275808_720w.jpg"
+            )
         return download_file(url)
 
-    def get_chat(self, chat_uid: ChatID) -> 'Chat':
-        if 'chat' not in self.info_list or not self.info_list['chat']:
+    def get_chat(self, chat_uid: ChatID) -> "Chat":
+        if "chat" not in self.info_list or not self.info_list["chat"]:
             self.log("Chat list is empty. Fetching...")
             self.update_friend_info()
-        for chat in self.info_list['chat']:
+        for chat in self.info_list["chat"]:
             if chat_uid == chat.uid:
                 return chat
         return None
 
-    def get_chats(self) -> Collection['Chat']:
-        if 'chat' not in self.info_list or not self.info_list['chat']:
+    def get_chats(self) -> Collection["Chat"]:
+        if "chat" not in self.info_list or not self.info_list["chat"]:
             self.log("Chat list is empty. Fetching...")
             self.update_friend_info()
 
-        return self.info_list['chat']
+        return self.info_list["chat"]
 
     def update_friend_info(self):
         with self.update_friend_lock:
-            if 'friend' in self.info_list and self.info_list['friend']:
+            if "friend" in self.info_list and self.info_list["friend"]:
                 return
-            self.log('Updating friend info...')
+            self.log("Updating friend info...")
             self.update_friend_event.clear()
 
             # 获取列表
-            self.message_queue.put_nowait(json.dumps({
-                'recv_type': 'FriendList'
-            }))
+            self.message_queue.put_nowait(json.dumps({"recv_type": "FriendList"}))
 
             self.update_friend_event.wait()
-            self.log('Friend retrieved. Start processing...')
+            self.log("Friend retrieved. Start processing...")
