@@ -306,7 +306,7 @@ class WechatCOMChannel(SlaveChannel):
             "remark": "null",
         }
 
-        return json.dumps(msg)
+        return msg
 
     # 接受远端发送的消息
     async def handler(self, conn):
