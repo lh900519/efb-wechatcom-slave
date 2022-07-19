@@ -199,7 +199,7 @@ class WechatCOMChannel(SlaveChannel):
                 host=self.config["server_addr"],
                 port=self.config["server_port"],
                 create_protocol=QueryParamProtocol,
-                ping_interval=2,
+                ping_interval=5,
                 loop=self.loop,
             )
 
